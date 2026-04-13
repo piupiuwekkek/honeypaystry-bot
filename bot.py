@@ -303,6 +303,6 @@ def handle_text(msg):
 #  RUN
 # ============================================================
 
-if name == "main":
+if __name__ == "__main__":
     print(f"✅ Bot {NAMA_TOKO} berjalan...")
     bot.infinity_polling()
