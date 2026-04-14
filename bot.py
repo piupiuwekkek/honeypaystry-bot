@@ -57,7 +57,7 @@ def kb_menu_utama():
     kb.add(InlineKeyboardButton("PPOB", callback_data="kat_ppob"))
     kb.add(InlineKeyboardButton("Tanya Admin", url=f"https://t.me/{ADMIN_USERNAME}"))
     return kb
-    def kb_joki():
+def kb_joki():
     kb = InlineKeyboardMarkup()
     for key, label in JOKI.items():
         kb.add(InlineKeyboardButton(label, callback_data=key))
