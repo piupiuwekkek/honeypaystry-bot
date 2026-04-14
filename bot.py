@@ -115,7 +115,7 @@ def cmd_cancel(msg):
         bot.send_message(ADMIN_ID, f"✅ Notif cancel terkirim ke {target_id}.", parse_mode="Markdown")
     except:
         bot.send_message(ADMIN_ID, "❌ User ID tidak valid.")
-        @bot.message_handler(commands=["proses"])
+@bot.message_handler(commands=["proses"])
 def cmd_proses(msg):
     if not is_admin(msg.from_user.id):
         return
@@ -362,6 +362,6 @@ def handle_text(msg):
 #  RUN
 # ============================================================
 
-if __name__ == "__main__":
+if name == "main":
     print(f"✅ Bot {NAMA_TOKO} berjalan...")
     bot.infinity_polling()
