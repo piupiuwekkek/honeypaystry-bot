@@ -174,7 +174,7 @@ def kat_joki(call):
 
 
 @bot.callback_query_handler(func=lambda c: c.data == "kat_ppob")
-f"1. Cek info payment: {CHANNEL_PAYMENT}\n"
+            f"1. Cek info payment: {CHANNEL_PAYMENT}\n"
             f"2. Lakukan pembayaran\n"
             f"3. Kirim bukti bayar di sini (foto)",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Info Payment", url=CHANNEL_PAYMENT)]])
