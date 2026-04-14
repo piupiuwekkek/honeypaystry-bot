@@ -41,7 +41,10 @@ JOKI = {
 
 def get_produk_ppob():
     try:
-        scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
         creds = Credentials.from_service_account_info(GOOGLE_CREDS, scopes=scopes)
         client = gspread.authorize(creds)
         sheet = client.open_by_key(SHEET_ID).sheet1
@@ -57,6 +60,8 @@ def kb_menu_utama():
     kb.add(InlineKeyboardButton("PPOB", callback_data="kat_ppob"))
     kb.add(InlineKeyboardButton("Tanya Admin", url=f"https://t.me/{ADMIN_USERNAME}"))
     return kb
+
+
 def kb_joki():
     kb = InlineKeyboardMarkup()
     for key, label in JOKI.items():
@@ -122,7 +127,11 @@ def cmd_done(msg):
         return
     try:
         target = int(parts[1])
-        bot.send_message(target, f"Order kamu sudah selesai! Terima kasih sudah order di {NAMA_TOKO}", reply_markup=kb_menu_utama())
+        bot.send_message(
+            target,
+            f"Order kamu sudah selesai! Terima kasih sudah order di {NAMA_TOKO}",
+            reply_markup=kb_menu_utama()
+        )
         bot.send_message(ADMIN_ID, f"Notif selesai terkirim ke {target}")
     except Exception:
         bot.send_message(ADMIN_ID, "User ID tidak valid")
@@ -138,7 +147,11 @@ def cmd_cancel(msg):
         return
     try:
         target = int(parts[1])
-        bot.send_message(target, f"Order kamu dibatalkan. Hubungi @{ADMIN_USERNAME} untuk info lebih lanjut.", reply_markup=kb_menu_utama())
+        bot.send_message(
+            target,
+            f"Order kamu dibatalkan. Hubungi @{ADMIN_USERNAME} untuk info lebih lanjut.",
+            reply_markup=kb_menu_utama()
+        )
         bot.send_message(ADMIN_ID, f"Notif cancel terkirim ke {target}")
     except Exception:
         bot.send_message(ADMIN_ID, "User ID tidak valid")
@@ -164,20 +177,163 @@ def cmd_proses(msg):
 def back_menu(call):
     uid = call.from_user.id
     sessions[uid] = {"step": "menu", "order": {}}
-    bot.edit_message_text("Pilih layanan:", uid, call.message.message_id, reply_markup=kb_menu_utama())
+    bot.edit_message_text(
+        "Pilih layanan:",
+        uid,
+        call.message.message_id,
+        reply_markup=kb_menu_utama()
+    )
 
 
 @bot.callback_query_handler(func=lambda c: c.data == "kat_joki")
 def kat_joki(call):
     bot.answer_callback_query(call.id)
-    bot.edit_message_text("Joki Tugas - Pilih jenis:", call.from_user.id, call.message.message_id, reply_markup=kb_joki())
+    bot.edit_message_text(
+        "Joki Tugas - Pilih jenis:",
+        call.from_user.id,
+        call.message.message_id,
+        reply_markup=kb_joki()
+    )
 
 
 @bot.callback_query_handler(func=lambda c: c.data == "kat_ppob")
+def kat_ppob(call):
+    bot.answer_callback_query(call.id, "Memuat produk...")
+    uid = call.from_user.id
+    produk_list = get_produk_ppob()
+    if not produk_list:
+        bot.edit_message_text(
+            "Gagal memuat produk. Hubungi admin.",
+            uid,
+            call.message.message_id,
+            reply_markup=kb_kembali()
+        )
+        return
+    bot.edit_message_text(
+        "PPOB - Pilih produk:",
+        uid,
+        call.message.message_id,
+        reply_markup=kb_ppob(produk_list)
+    )
+
+
+@bot.callback_query_handler(func=lambda c: c.data.startswith("joki_"))
+def pilih_joki(call):
+    uid = call.from_user.id
+    key = call.data
+    label = JOKI.get(key, "Joki Tugas")
+    sessions[uid] = {"step": "joki_detail", "order": {"jenis": label}}
+    bot.edit_message_text(
+        f"Dipilih: {label}\n\nKetik detail tugas kamu (judul, deadline, instruksi):",
+        uid,
+        call.message.message_id,
+        reply_markup=kb_kembali()
+    )
+
+
+@bot.callback_query_handler(func=lambda c: c.data.startswith("ppob_"))
+def pilih_ppob(call):
+    uid = call.from_user.id
+    kode = call.data.replace("ppob_", "")
+    produk_list = get_produk_ppob()
+    produk = next((p for p in produk_list if str(p["kode"]) == kode), None)
+    if not produk:
+        bot.answer_callback_query(call.id, "Produk tidak ditemukan.")
+        return
+    sessions[uid] = {
+        "step": "ppob_isi_data",
+        "order": {
+            "jenis": produk["nama"],
+            "harga": produk["harga"],
+            "kode": kode
+        }
+    }
+    bot.edit_message_text(
+        f"Dipilih: {produk['nama']}\nHarga: Rp{int(produk['harga']):,}\n\nKetik nomor HP / ID pelanggan:",
+        uid,
+        call.message.message_id,
+        reply_markup=kb_kembali()
+    )
+
+
+@bot.message_handler(content_types=["photo"])
+def handle_foto(msg):
+    uid = msg.from_user.id
+    sesi = sessions.get(uid, {})
+    if sesi.get("step") != "tunggu_bukpem":
+        bot.send_message(uid, "Ketik /start untuk mulai order.")
+        return
+    order = sesi.get("order", {})
+    bot.send_message(
+        uid,
+        "Bukti bayar diterima! Admin akan segera memverifikasi.",
+        reply_markup=kb_kembali()
+    )
+    caption = (
+        f"BUKTI BAYAR MASUK\n"
+        f"Produk: {order.get('jenis', '-')}\n"
+        f"Detail: {order.get('detail', '-')}\n"
+        f"Harga: Rp{int(order.get('harga', 0)):,}\n"
+        f"Ref: {order.get('ref', '-')}\n"
+        f"Buyer: @{msg.from_user.username or 'no username'}\n"
+        f"User ID: {uid}\n\n"
+        f"/proses {uid}\n"
+        f"/done {uid}\n"
+        f"/cancel {uid}"
+    )
+    bot.forward_message(ADMIN_ID, uid, msg.message_id)
+    bot.send_message(ADMIN_ID, caption)
+    sessions[uid]["step"] = "selesai"
+
+
+@bot.message_handler(func=lambda m: True)
+def handle_text(msg):
+    uid = msg.from_user.id
+    teks = msg.text.strip()
+    sesi = sessions.get(uid)
+    if not sesi:
+        start(msg)
+        return
+    step = sesi.get("step")
+    order = sesi["order"]
+
+    if step == "joki_detail":
+        order["detail"] = teks
+        order["ref"] = f"JKI{uid}{int(time.time())}"
+        sessions[uid]["step"] = "tunggu_bukpem"
+        bot.send_message(
+            uid,
+            f"Order diterima!\n"
+            f"Jenis: {order['jenis']}\n"
+            f"Detail: {teks}\n"
+            f"Ref: {order['ref']}\n\n"
+            f"1. Tunggu admin konfirmasi harga\n"
+            f"2. Cek info payment: {CHANNEL_PAYMENT}\n"
+            f"3. Kirim bukti bayar di sini (foto)",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("Info Payment", url=CHANNEL_PAYMENT)
+            ]])
+        )
+        username_buyer = f"@{msg.from_user.username}" if msg.from_user.username else str(uid)
+        kirim_notif_admin(uid, order, username_buyer, "JOKI")
+
+    elif step == "ppob_isi_data":
+        order["detail"] = teks
+        order["ref"] = f"PPB{uid}{int(time.time())}"
+        sessions[uid]["step"] = "tunggu_bukpem"
+        bot.send_message(
+            uid,
+            f"Order diterima!\n"
+            f"Produk: {order['jenis']}\n"
+            f"No/ID: {teks}\n"
+            f"Harga: Rp{int(order['harga']):,}\n"
+            f"Ref: {order['ref']}\n\n"
             f"1. Cek info payment: {CHANNEL_PAYMENT}\n"
             f"2. Lakukan pembayaran\n"
             f"3. Kirim bukti bayar di sini (foto)",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Info Payment", url=CHANNEL_PAYMENT)]])
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("Info Payment", url=CHANNEL_PAYMENT)
+            ]])
         )
         username_buyer = f"@{msg.from_user.username}" if msg.from_user.username else str(uid)
         kirim_notif_admin(uid, order, username_buyer, "PPOB")
@@ -186,6 +342,6 @@ def kat_joki(call):
         bot.send_message(uid, "Ketik /start untuk mulai order.")
 
 
-if name == "main":
+if __name__ == "__main__":
     print(f"Bot {NAMA_TOKO} berjalan...")
     bot.infinity_polling()
