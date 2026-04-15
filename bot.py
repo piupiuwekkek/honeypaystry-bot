@@ -1,10 +1,12 @@
 import telebot
 import time
+import json
+import os
 import gspread
 from google.oauth2.service_account import Credentials
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-BOT_TOKEN = "8417510832:AAF9sScYaUtQ3lQ65erwGXFbJty_lVUHA24"
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8417510832:AAF9sScYaUtQ3lQ65erwGXFbJty_lVUHA24")
 ADMIN_ID = 6911699137
 ADMIN_USERNAME = "rhezzan"
 OWNER_ID = 7307675541
@@ -16,19 +18,7 @@ CHANNEL_REVIEW_ID = "@HoneysttReview"
 SHEET_ID_PPOB = "1hlrp0OoNbAw9peNsLV3rIrVG4uIL8NOClbGzNen3qtU"
 SHEET_ID_GAME = "1YDa8aafIeq2njVp_ePmlENUAyvJA8rtYR7mgzM3qg2I"
 
-GOOGLE_CREDS = {
-    "type": "service_account",
-    "project_id": "honeypaystry-bot",
-    "private_key_id": "b757f75b4c2beb597dc29bd1ebdf6feda535a2a6",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCljmfLbP9wnPD0\nIb2IM7TiOeMUlX0JUS0QrSvYvsCiK2P/xZN31QaGhLKoYBolySdBZ44iWl333pED\nedrI/e+AbyS2thDhk7mjU5o4SnTJw2Dm1fhndlFhAfhbmVX+Xyk/Ns+8oDEKuhwD\ngzFcrgdLVGszFi34QzzC2mTo+D9RvlJRU/oAEBEbEg+1Y+KNlJZB6ukbHkLrLCEX\nnEbdif5z9zNaOqA+ly9yhzvieF1CDvrVSc74jVaoJM5geElDwZij7UZLWNoRQKuf\nfDZ4JMLvJqPjinAjAYTomshU4Ppd1+pNQokFTvdmBeuE4J9Wvc8q/zwB513Jh9/3\ncThVv46DAgMBAAECggEAL6G+pC0KezR0MNEqTi8OOk5MUqZF0LHtxNAF/vi2xJG2\nVibarE36cCZqnn3z1+49YJhyMNkOExwSXc0n0M8aormXdwf/6F7PuLl7c/mcC1au\noQtryhylAkOGWJhPwP1RCTJ0Z0ExivQLzkjnIVKin548r3iQpk52A1vBT7Pox9QD\nNaMXXB/O3ZoLJ22XEAhsyR6+M03GwGaMxaDTrQi+scK3Y+cG6uuIaDyh7cswttUT\n/1tpTq5fnAHqZVjtjYf9iHHBn1llrVAFawAMWexYCAG4sbaMntFWdTaGAKBlIaFC\nVGBVBqvizOiq2pMjA0ZfJmkt423oH3Dy3NNrVMgimQKBgQDN33UjFAb0tAPm1gWb\nNwLeyPxnV5R13PajMVNKX/Yw/04SwpzqFMX9jajtRsZP8mjDUdmwefiQPYogtuzt\nuil+mAm9bglqjl8P5ooftkk+WPRx6fY7t3cJd/BiNIYH7vfotG+yENJsgg1vlgFD\n1fISUPHrIUN1F2Qr0O4xTjdnSQKBgQDN3esgcC84t+8zZSG7gDP75IyEi+S9FG/J\n8Qsh5ZrdwvQK9msNOegRTkJD2XZR9LGCJZF3+NbLuEcNcau9a8WVaEvb4tQ88qhU\nscOQD5G6VULMDcA+a9qRngo+Dw2HHSSxSZtTK5+nI972crfhnEwpumuJLD1M77yw\n+7hjta1LawKBgDS6I5UdXv6zUECB1iO/viNzFHofSy24rw5y5qMo2rQH32Yco/Wr\n5l2fN4G127rEGiLURs3VH11J9aOVVi84u8HpjK0QjqbU2fIHmJ6woCewvsKiKmd3\nAKzTJCTy0NUdVi8qb2UKu+oAkRJgN+i41evtAVi4Rz+pAwXZ1/eW0cfJAoGBAMOz\nrBqJKwrTKAyGnjudk01pJf+28Tqh2+dwQrH1kHQyKUbmnDvViXwyFiJj7uvYHorn\nZdNT9fVx9/Ga1rVaZ1kx7bNZfYN29niVCKDBfDpTZQ2QIOn2I7B8OaZnLuf7127F\n12eIN9xu6D0GLzHFIE4mzqV3LcseuBTTJqV7BwODAoGAcbkyOPttp1FY4s87tidF\nO8NN3JAQHhxYO+u5uPbsq+yQ9f1yLLgT+VCiIzNtjxjVdkUVcvWaTPNeTHMXHjzs\ntlX2s4HmxHUZt1X8OeEliXpP0YOeV8NxLA8/Nnc6uPIjpjAqc3726aGlqrG/UDrx\npHu1w4dODAHj2/Ih7IqUgmA=\n-----END PRIVATE KEY-----\n",
-    "client_email": "honeypaystry-bot@honeypaystry-bot.iam.gserviceaccount.com",
-    "client_id": "114508117228448871347",
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token",
-    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/honeypaystry-bot%40honeypaystry-bot.iam.gserviceaccount.com",
-    "universe_domain": "googleapis.com"
-}
+GOOGLE_CREDS = json.loads(os.environ.get("GOOGLE_CREDS_JSON", "{}"))
 
 bot = telebot.TeleBot(BOT_TOKEN)
 sessions = {}
@@ -117,23 +107,20 @@ def kirim_notif_admin(uid, order, username_buyer, tipe):
 
 
 def minta_review(uid, order):
-    pending_review[uid] = {
-        "order": order,
-        "step": "rating"
-    }
+    pending_review[uid] = {"order": order, "step": "rating"}
     kb = InlineKeyboardMarkup()
     kb.row(
-        InlineKeyboardButton("⭐ 1", callback_data="rate_1"),
-        InlineKeyboardButton("⭐ 2", callback_data="rate_2"),
-        InlineKeyboardButton("⭐ 3", callback_data="rate_3"),
-        InlineKeyboardButton("⭐ 4", callback_data="rate_4"),
-        InlineKeyboardButton("⭐ 5", callback_data="rate_5"),
+        InlineKeyboardButton("1", callback_data="rate_1"),
+        InlineKeyboardButton("2", callback_data="rate_2"),
+        InlineKeyboardButton("3", callback_data="rate_3"),
+        InlineKeyboardButton("4", callback_data="rate_4"),
+        InlineKeyboardButton("5", callback_data="rate_5"),
     )
     bot.send_message(
         uid,
         f"Terima kasih sudah order di {NAMA_TOKO}!\n\n"
         f"Sebelum lanjut order berikutnya, mohon isi rating dulu ya:\n"
-        f"Berikan bintang untuk pelayanan kami:",
+        f"Berikan bintang untuk pelayanan kami (1-5):",
         reply_markup=kb
     )
 
@@ -212,10 +199,7 @@ def kb_kembali(callback="back_menu"):
 def start(msg):
     uid = msg.from_user.id
     if uid in pending_review:
-        bot.send_message(
-            uid,
-            "Kamu belum mengisi rating order sebelumnya.\nMohon isi rating dulu sebelum order lagi."
-        )
+        bot.send_message(uid, "Kamu belum mengisi rating order sebelumnya.\nMohon isi rating dulu sebelum order lagi.")
         minta_review(uid, pending_review[uid]["order"])
         return
     sessions[uid] = {"step": "menu", "order": {}}
@@ -239,11 +223,7 @@ def cmd_done(msg):
         target = int(parts[1])
         sesi = sessions.get(target, {})
         order = sesi.get("order", {})
-        pending_review[target] = {"order": order, "step": "rating"}
-        bot.send_message(
-            target,
-            f"Order kamu sudah selesai! Terima kasih sudah order di {NAMA_TOKO}"
-        )
+        bot.send_message(target, f"Order kamu sudah selesai! Terima kasih sudah order di {NAMA_TOKO}")
         minta_review(target, order)
         bot.send_message(msg.from_user.id, f"Notif selesai + review terkirim ke {target}")
     except Exception:
@@ -291,14 +271,11 @@ def handle_rating(call):
     uid = call.from_user.id
     rating = int(call.data.replace("rate_", ""))
     stars = "⭐" * rating
-
     if uid not in pending_review:
         bot.answer_callback_query(call.id)
         return
-
     pending_review[uid]["rating"] = rating
     pending_review[uid]["step"] = "saran"
-
     bot.edit_message_text(
         f"Rating kamu: {stars}\n\nSekarang tulis kritik & saran kamu (boleh singkat):",
         uid,
@@ -314,12 +291,7 @@ def back_menu(call):
         bot.answer_callback_query(call.id, "Isi rating dulu ya!")
         return
     sessions[uid] = {"step": "menu", "order": {}}
-    bot.edit_message_text(
-        "Pilih layanan:",
-        uid,
-        call.message.message_id,
-        reply_markup=kb_menu_utama()
-    )
+    bot.edit_message_text("Pilih layanan:", uid, call.message.message_id, reply_markup=kb_menu_utama())
 
 
 @bot.callback_query_handler(func=lambda c: c.data == "kat_joki")
@@ -329,12 +301,7 @@ def kat_joki(call):
         bot.answer_callback_query(call.id, "Isi rating dulu ya!")
         return
     bot.answer_callback_query(call.id)
-    bot.edit_message_text(
-        "Joki Tugas - Pilih jenis:",
-        uid,
-        call.message.message_id,
-        reply_markup=kb_joki()
-    )
+    bot.edit_message_text("Joki Tugas - Pilih jenis:", uid, call.message.message_id, reply_markup=kb_joki())
 
 
 @bot.callback_query_handler(func=lambda c: c.data == "kat_ppob")
@@ -344,12 +311,7 @@ def kat_ppob(call):
         bot.answer_callback_query(call.id, "Isi rating dulu ya!")
         return
     bot.answer_callback_query(call.id)
-    bot.edit_message_text(
-        "PPOB - Pilih kategori:",
-        uid,
-        call.message.message_id,
-        reply_markup=kb_ppob()
-    )
+    bot.edit_message_text("PPOB - Pilih kategori:", uid, call.message.message_id, reply_markup=kb_ppob())
 
 
 @bot.callback_query_handler(func=lambda c: c.data == "kat_game")
@@ -359,34 +321,19 @@ def kat_game(call):
         bot.answer_callback_query(call.id, "Isi rating dulu ya!")
         return
     bot.answer_callback_query(call.id)
-    bot.edit_message_text(
-        "Top Up Game - Pilih game:",
-        uid,
-        call.message.message_id,
-        reply_markup=kb_game()
-    )
+    bot.edit_message_text("Top Up Game - Pilih game:", uid, call.message.message_id, reply_markup=kb_game())
 
 
 @bot.callback_query_handler(func=lambda c: c.data == "ppob_kat_pulsa")
 def ppob_pulsa(call):
     bot.answer_callback_query(call.id)
-    bot.edit_message_text(
-        "Pulsa - Pilih provider:",
-        call.from_user.id,
-        call.message.message_id,
-        reply_markup=kb_provider("pulsa")
-    )
+    bot.edit_message_text("Pulsa - Pilih provider:", call.from_user.id, call.message.message_id, reply_markup=kb_provider("pulsa"))
 
 
 @bot.callback_query_handler(func=lambda c: c.data == "ppob_kat_kuota")
 def ppob_kuota(call):
     bot.answer_callback_query(call.id)
-    bot.edit_message_text(
-        "Kuota - Pilih provider:",
-        call.from_user.id,
-        call.message.message_id,
-        reply_markup=kb_provider("kuota")
-    )
+    bot.edit_message_text("Kuota - Pilih provider:", call.from_user.id, call.message.message_id, reply_markup=kb_provider("kuota"))
 
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("provider_"))
@@ -394,43 +341,28 @@ def pilih_provider(call):
     uid = call.from_user.id
     tab_name = call.data.replace("provider_", "")
     bot.answer_callback_query(call.id, "Memuat produk...")
-
     produk_list = get_sheet_data(SHEET_ID_PPOB, tab_name)
-
     if not produk_list:
         bot.edit_message_text(
             "Produk tidak tersedia atau belum diisi. Hubungi admin.",
-            uid,
-            call.message.message_id,
+            uid, call.message.message_id,
             reply_markup=kb_kembali("kat_ppob")
         )
         return
-
     sessions[uid] = sessions.get(uid, {"step": "menu", "order": {}})
     sessions[uid]["order"]["tab"] = tab_name
-
-    subkats = list(dict.fromkeys([
-        p["kategori"] for p in produk_list if p.get("kategori")
-    ]))
-
+    subkats = list(dict.fromkeys([p["kategori"] for p in produk_list if p.get("kategori")]))
     if subkats:
         tipe_label = tab_name.replace("pulsa_", "").replace("kuota_", "").title()
         bot.edit_message_text(
             f"{tab_name.split('_')[0].title()} {tipe_label} - Pilih kategori:",
-            uid,
-            call.message.message_id,
+            uid, call.message.message_id,
             reply_markup=kb_subkat(subkats, tab_name)
         )
         return
-
     back = "ppob_kat_pulsa" if tab_name.startswith("pulsa_") else "ppob_kat_kuota"
     sessions[uid]["order"]["produk_list"] = produk_list
-    bot.edit_message_text(
-        "Pilih produk:",
-        uid,
-        call.message.message_id,
-        reply_markup=kb_produk(produk_list, back)
-    )
+    bot.edit_message_text("Pilih produk:", uid, call.message.message_id, reply_markup=kb_produk(produk_list, back))
 
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("subkat_"))
@@ -442,19 +374,15 @@ def pilih_subkat(call):
     provider = parts[1]
     subkat = parts[2] if len(parts) > 2 else ""
     tab_name = f"{tipe}_{provider}"
-
     produk_list = get_sheet_data(SHEET_ID_PPOB, tab_name)
     filtered = [p for p in produk_list if p.get("kategori") == subkat]
-
     if not filtered:
         bot.answer_callback_query(call.id, "Produk tidak ditemukan.")
         return
-
     sessions[uid]["order"]["produk_list"] = filtered
     bot.edit_message_text(
         f"{tipe.title()} {provider.title()} - {subkat}:",
-        uid,
-        call.message.message_id,
+        uid, call.message.message_id,
         reply_markup=kb_produk(filtered, f"provider_{tab_name}")
     )
 
@@ -464,27 +392,18 @@ def pilih_game(call):
     uid = call.from_user.id
     tab_name = call.data.replace("game_", "")
     bot.answer_callback_query(call.id, "Memuat produk...")
-
     produk_list = get_sheet_data(SHEET_ID_GAME, tab_name)
     if not produk_list:
         bot.edit_message_text(
             "Produk tidak tersedia. Hubungi admin.",
-            uid,
-            call.message.message_id,
+            uid, call.message.message_id,
             reply_markup=kb_kembali("kat_game")
         )
         return
-
     sessions[uid] = sessions.get(uid, {"step": "menu", "order": {}})
     sessions[uid]["order"]["tab"] = tab_name
     sessions[uid]["order"]["produk_list"] = produk_list
-
-    bot.edit_message_text(
-        "Pilih nominal:",
-        uid,
-        call.message.message_id,
-        reply_markup=kb_produk(produk_list, "kat_game")
-    )
+    bot.edit_message_text("Pilih nominal:", uid, call.message.message_id, reply_markup=kb_produk(produk_list, "kat_game"))
 
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("beli_"))
@@ -494,20 +413,13 @@ def pilih_produk(call):
     sesi = sessions.get(uid, {})
     produk_list = sesi.get("order", {}).get("produk_list", [])
     produk = next((p for p in produk_list if str(p["kode"]) == kode), None)
-
     if not produk:
         bot.answer_callback_query(call.id, "Produk tidak ditemukan.")
         return
-
     if is_gangguan(produk):
-        bot.answer_callback_query(call.id, "Produk ini sedang gangguan, coba lagi nanti.")
-        bot.send_message(
-            uid,
-            f"Maaf, produk {produk['nama']} sedang mengalami gangguan.\n"
-            f"Silakan pilih produk lain atau hubungi admin."
-        )
+        bot.answer_callback_query(call.id, "Produk ini sedang gangguan.")
+        bot.send_message(uid, f"Maaf, {produk['nama']} sedang gangguan. Pilih produk lain atau hubungi admin.")
         return
-
     tab = sesi.get("order", {}).get("tab", "")
     if tab in ["ml", "ff", "pubg", "hok"]:
         step = "game_isi_id"
@@ -515,21 +427,13 @@ def pilih_produk(call):
     else:
         step = "ppob_isi_data"
         prompt = "Masukkan nomor HP / ID pelanggan:"
-
     sessions[uid] = {
         "step": step,
-        "order": {
-            "jenis": produk["nama"],
-            "harga": produk["harga"],
-            "kode": kode,
-            "tab": tab
-        }
+        "order": {"jenis": produk["nama"], "harga": produk["harga"], "kode": kode, "tab": tab}
     }
-
     bot.edit_message_text(
         f"Dipilih: {produk['nama']}\nHarga: Rp{int(produk['harga']):,}\n\n{prompt}",
-        uid,
-        call.message.message_id,
+        uid, call.message.message_id,
         reply_markup=kb_kembali()
     )
 
@@ -542,8 +446,7 @@ def pilih_joki(call):
     sessions[uid] = {"step": "joki_detail", "order": {"jenis": label}}
     bot.edit_message_text(
         f"Dipilih: {label}\n\nKetik detail tugas kamu (judul, deadline, instruksi):",
-        uid,
-        call.message.message_id,
+        uid, call.message.message_id,
         reply_markup=kb_kembali()
     )
 
@@ -556,10 +459,7 @@ def handle_foto(msg):
         bot.send_message(uid, "Ketik /start untuk mulai order.")
         return
     order = sesi.get("order", {})
-    bot.send_message(
-        uid,
-        "Bukti bayar diterima! Admin akan segera memverifikasi."
-    )
+    bot.send_message(uid, "Bukti bayar diterima! Admin akan segera memverifikasi.")
     caption = (
         f"BUKTI BAYAR MASUK\n"
         f"Produk: {order.get('jenis', '-')}\n"
@@ -572,13 +472,12 @@ def handle_foto(msg):
         f"/done {uid}\n"
         f"/cancel {uid}"
     )
-    bot.forward_message(ADMIN_ID, uid, msg.message_id)
-    bot.send_message(ADMIN_ID, caption)
-    try:
-        bot.forward_message(OWNER_ID, uid, msg.message_id)
-        bot.send_message(OWNER_ID, caption)
-    except Exception:
-        pass
+    for admin in [ADMIN_ID, OWNER_ID]:
+        try:
+            bot.forward_message(admin, uid, msg.message_id)
+            bot.send_message(admin, caption)
+        except Exception:
+            pass
     sessions[uid]["step"] = "selesai"
 
 
@@ -593,24 +492,19 @@ def handle_text(msg):
             rating = rev.get("rating", 0)
             stars = "⭐" * rating
             order = rev.get("order", {})
-            saran = teks
-
             review_text = (
                 f"REVIEW BARU\n"
                 f"Produk: {order.get('jenis', '-')}\n"
                 f"Rating: {stars} ({rating}/5)\n"
-                f"Kritik & Saran: {saran}\n"
+                f"Kritik & Saran: {teks}\n"
                 f"Buyer: @{msg.from_user.username or 'no username'}"
             )
-
             try:
                 bot.send_message(CHANNEL_REVIEW_ID, review_text)
             except Exception as e:
                 print(f"Gagal kirim ke channel review: {e}")
-
             del pending_review[uid]
             sessions[uid] = {"step": "menu", "order": {}}
-
             bot.send_message(
                 uid,
                 f"Terima kasih atas review-nya! {stars}\n\n"
@@ -624,7 +518,6 @@ def handle_text(msg):
     if not sesi:
         start(msg)
         return
-
     step = sesi.get("step")
     order = sesi["order"]
 
@@ -634,16 +527,11 @@ def handle_text(msg):
         sessions[uid]["step"] = "tunggu_bukpem"
         bot.send_message(
             uid,
-            f"Order diterima!\n"
-            f"Jenis: {order['jenis']}\n"
-            f"Detail: {teks}\n"
-            f"Ref: {order['ref']}\n\n"
+            f"Order diterima!\nJenis: {order['jenis']}\nDetail: {teks}\nRef: {order['ref']}\n\n"
             f"1. Tunggu admin konfirmasi harga\n"
             f"2. Cek info payment: {CHANNEL_PAYMENT}\n"
             f"3. Kirim bukti bayar di sini (foto)",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("Info Payment", url=CHANNEL_PAYMENT)
-            ]])
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Info Payment", url=CHANNEL_PAYMENT)]])
         )
         username_buyer = f"@{msg.from_user.username}" if msg.from_user.username else str(uid)
         kirim_notif_admin(uid, order, username_buyer, "JOKI")
@@ -654,17 +542,11 @@ def handle_text(msg):
         sessions[uid]["step"] = "tunggu_bukpem"
         bot.send_message(
             uid,
-            f"Order diterima!\n"
-            f"Produk: {order['jenis']}\n"
-            f"No/ID: {teks}\n"
-            f"Harga: Rp{int(order['harga']):,}\n"
-            f"Ref: {order['ref']}\n\n"
+            f"Order diterima!\nProduk: {order['jenis']}\nNo/ID: {teks}\nHarga: Rp{int(order['harga']):,}\nRef: {order['ref']}\n\n"
             f"1. Cek info payment: {CHANNEL_PAYMENT}\n"
             f"2. Lakukan pembayaran\n"
             f"3. Kirim bukti bayar di sini (foto)",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("Info Payment", url=CHANNEL_PAYMENT)
-            ]])
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Info Payment", url=CHANNEL_PAYMENT)]])
         )
         username_buyer = f"@{msg.from_user.username}" if msg.from_user.username else str(uid)
         kirim_notif_admin(uid, order, username_buyer, "PPOB")
@@ -675,17 +557,11 @@ def handle_text(msg):
         sessions[uid]["step"] = "tunggu_bukpem"
         bot.send_message(
             uid,
-            f"Order diterima!\n"
-            f"Produk: {order['jenis']}\n"
-            f"ID Game: {teks}\n"
-            f"Harga: Rp{int(order['harga']):,}\n"
-            f"Ref: {order['ref']}\n\n"
+            f"Order diterima!\nProduk: {order['jenis']}\nID Game: {teks}\nHarga: Rp{int(order['harga']):,}\nRef: {order['ref']}\n\n"
             f"1. Cek info payment: {CHANNEL_PAYMENT}\n"
             f"2. Lakukan pembayaran\n"
             f"3. Kirim bukti bayar di sini (foto)",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("Info Payment", url=CHANNEL_PAYMENT)
-            ]])
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Info Payment", url=CHANNEL_PAYMENT)]])
         )
         username_buyer = f"@{msg.from_user.username}" if msg.from_user.username else str(uid)
         kirim_notif_admin(uid, order, username_buyer, "GAME")
