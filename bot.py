@@ -13,10 +13,12 @@ OWNER_ID = 7307675541
 OWNER_USERNAME = "dahneaa"
 NAMA_TOKO = "HoneyPaystry"
 CHANNEL_PAYMENT = "https://t.me/piementt"
-CHANNEL_REVIEW = "https://t.me/HoneysttReview"
 CHANNEL_REVIEW_ID = "@HoneysttReview"
+CHANNEL_REVIEW = "https://t.me/HoneysttReview"
+
 SHEET_ID_PPOB = "1hlrp0OoNbAw9peNsLV3rIrVG4uIL8NOClbGzNen3qtU"
 SHEET_ID_GAME = "1YDa8aafIeq2njVp_ePmlENUAyvJA8rtYR7mgzM3qg2I"
+SHEET_ID_PREMIUM = "1F9etJEWCCooVh2pKBR-mKxSkEYsLNxOGVDfqz2G7klE"
 
 GOOGLE_CREDS = json.loads(os.environ.get("GOOGLE_CREDS_JSON", "{}"))
 
@@ -24,14 +26,30 @@ bot = telebot.TeleBot(BOT_TOKEN)
 sessions = {}
 pending_review = {}
 
-JOKI = {
-    "joki_makalah": "Makalah / Esai",
-    "joki_laporan": "Laporan Praktikum",
-    "joki_ppt": "Presentasi PPT",
-    "joki_jurnal": "Resume / Resensi Jurnal",
-    "joki_proposal": "Proposal Penelitian",
-    "joki_skripsi": "Bab Skripsi / TA",
-    "joki_lainnya": "Lainnya"
+FORMAT_JOKI = (
+    "Silakan isi format order berikut, lalu kirim ke sini:\n\n"
+    "Jenis Tugas: (jurnal/essay/makalah/laporan/PPT/proposal/skripsi/lainnya)\n"
+    "Judul/Topik: \n"
+    "Detail Tugas: \n"
+    "Deadline: \n"
+    "Jumlah Halaman/Kata: \n"
+    "Referensi Khusus: (kosongkan jika tidak ada)\n"
+    "Catatan Tambahan: (kosongkan jika tidak ada)"
+)
+
+FORMAT_CONVERT = "https://t.me/honeypaystry/36"
+
+PRICELIST = {
+    "cv": "https://t.me/honeypaystry/18",
+    "jaspin": "https://t.me/honeypaystry/17",
+    "rekber": "https://t.me/honeypaystry/22",
+    "jasget": "https://t.me/honeypaystry/23",
+}
+
+CHANNEL_TESTI = {
+    "tugas": ("Testi Tugas", "https://t.me/resultmayo"),
+    "transaksi": ("Testi Transaksi", "https://t.me/coneverts"),
+    "game": ("Testi Game", "https://t.me/tasteplay"),
 }
 
 PROVIDER_PULSA = [
@@ -119,8 +137,7 @@ def minta_review(uid, order):
     bot.send_message(
         uid,
         f"Terima kasih sudah order di {NAMA_TOKO}!\n\n"
-        f"Sebelum lanjut order berikutnya, mohon isi rating dulu ya:\n"
-        f"Berikan bintang untuk pelayanan kami (1-5):",
+        f"Sebelum lanjut order berikutnya, mohon isi rating dulu ya (1-5):",
         reply_markup=kb
     )
 
@@ -130,15 +147,19 @@ def kb_menu_utama():
     kb.add(InlineKeyboardButton("Joki Tugas", callback_data="kat_joki"))
     kb.add(InlineKeyboardButton("PPOB", callback_data="kat_ppob"))
     kb.add(InlineKeyboardButton("Top Up Game", callback_data="kat_game"))
+    kb.add(InlineKeyboardButton("Aplikasi Premium", callback_data="kat_premium"))
+    kb.row(
+        InlineKeyboardButton("CV", callback_data="kat_cv"),
+        InlineKeyboardButton("Jaspin", callback_data="kat_jaspin"),
+    )
+    kb.row(
+        InlineKeyboardButton("Rekber", callback_data="kat_rekber"),
+        InlineKeyboardButton("Jasget", callback_data="kat_jasget"),
+    )
+    kb.add(InlineKeyboardButton("Testi Tugas", url=CHANNEL_TESTI["tugas"][1]))
+    kb.add(InlineKeyboardButton("Testi Transaksi", url=CHANNEL_TESTI["transaksi"][1]))
+    kb.add(InlineKeyboardButton("Testi Game", url=CHANNEL_TESTI["game"][1]))
     kb.add(InlineKeyboardButton("Tanya Admin", url=f"https://t.me/{ADMIN_USERNAME}"))
-    return kb
-
-
-def kb_joki():
-    kb = InlineKeyboardMarkup()
-    for key, label in JOKI.items():
-        kb.add(InlineKeyboardButton(label, callback_data=key))
-    kb.add(InlineKeyboardButton("Kembali", callback_data="back_menu"))
     return kb
 
 
@@ -195,10 +216,24 @@ def kb_kembali(callback="back_menu"):
     return kb
 
 
+def kb_convert(kat):
+    kb = InlineKeyboardMarkup()
+    kb.add(InlineKeyboardButton("Lihat Pricelist", url=PRICELIST[kat]))
+    kb.add(InlineKeyboardButton("Lihat Format Order", url=FORMAT_CONVERT))
+    kb.add(InlineKeyboardButton("Kembali", callback_data="back_menu"))
+    return kb
+
+
+def cek_pending_review(uid):
+    if uid in pending_review:
+        return True
+    return False
+
+
 @bot.message_handler(commands=["start", "menu"])
 def start(msg):
     uid = msg.from_user.id
-    if uid in pending_review:
+    if cek_pending_review(uid):
         bot.send_message(uid, "Kamu belum mengisi rating order sebelumnya.\nMohon isi rating dulu sebelum order lagi.")
         minta_review(uid, pending_review[uid]["order"])
         return
@@ -278,8 +313,7 @@ def handle_rating(call):
     pending_review[uid]["step"] = "saran"
     bot.edit_message_text(
         f"Rating kamu: {stars}\n\nSekarang tulis kritik & saran kamu (boleh singkat):",
-        uid,
-        call.message.message_id
+        uid, call.message.message_id
     )
     bot.answer_callback_query(call.id)
 
@@ -287,7 +321,7 @@ def handle_rating(call):
 @bot.callback_query_handler(func=lambda c: c.data == "back_menu")
 def back_menu(call):
     uid = call.from_user.id
-    if uid in pending_review:
+    if cek_pending_review(uid):
         bot.answer_callback_query(call.id, "Isi rating dulu ya!")
         return
     sessions[uid] = {"step": "menu", "order": {}}
@@ -297,17 +331,22 @@ def back_menu(call):
 @bot.callback_query_handler(func=lambda c: c.data == "kat_joki")
 def kat_joki(call):
     uid = call.from_user.id
-    if uid in pending_review:
+    if cek_pending_review(uid):
         bot.answer_callback_query(call.id, "Isi rating dulu ya!")
         return
     bot.answer_callback_query(call.id)
-    bot.edit_message_text("Joki Tugas - Pilih jenis:", uid, call.message.message_id, reply_markup=kb_joki())
+    sessions[uid] = {"step": "joki_detail", "order": {"jenis": "Joki Tugas"}}
+    bot.edit_message_text(
+        f"Joki Tugas\n\n{FORMAT_JOKI}\n\nSalin format di atas, isi, lalu kirim ke sini:",
+        uid, call.message.message_id,
+        reply_markup=kb_kembali()
+    )
 
 
 @bot.callback_query_handler(func=lambda c: c.data == "kat_ppob")
 def kat_ppob(call):
     uid = call.from_user.id
-    if uid in pending_review:
+    if cek_pending_review(uid):
         bot.answer_callback_query(call.id, "Isi rating dulu ya!")
         return
     bot.answer_callback_query(call.id)
@@ -317,11 +356,60 @@ def kat_ppob(call):
 @bot.callback_query_handler(func=lambda c: c.data == "kat_game")
 def kat_game(call):
     uid = call.from_user.id
-    if uid in pending_review:
+    if cek_pending_review(uid):
         bot.answer_callback_query(call.id, "Isi rating dulu ya!")
         return
     bot.answer_callback_query(call.id)
     bot.edit_message_text("Top Up Game - Pilih game:", uid, call.message.message_id, reply_markup=kb_game())
+
+
+@bot.callback_query_handler(func=lambda c: c.data == "kat_premium")
+def kat_premium(call):
+    uid = call.from_user.id
+    if cek_pending_review(uid):
+        bot.answer_callback_query(call.id, "Isi rating dulu ya!")
+        return
+    bot.answer_callback_query(call.id, "Memuat produk...")
+    produk_list = get_sheet_data(SHEET_ID_PREMIUM, "Sheet1")
+    if not produk_list:
+        bot.edit_message_text(
+            "Produk tidak tersedia. Hubungi admin.",
+            uid, call.message.message_id,
+            reply_markup=kb_kembali()
+        )
+        return
+    sessions[uid] = sessions.get(uid, {"step": "menu", "order": {}})
+    sessions[uid]["order"]["tab"] = "premium"
+    sessions[uid]["order"]["produk_list"] = produk_list
+    bot.edit_message_text(
+        "Aplikasi Premium - Pilih produk:",
+        uid, call.message.message_id,
+        reply_markup=kb_produk(produk_list, "back_menu")
+    )
+
+
+@bot.callback_query_handler(func=lambda c: c.data in ["kat_cv", "kat_jaspin", "kat_rekber", "kat_jasget"])
+def kat_convert(call):
+    uid = call.from_user.id
+    if cek_pending_review(uid):
+        bot.answer_callback_query(call.id, "Isi rating dulu ya!")
+        return
+    bot.answer_callback_query(call.id)
+    kat = call.data.replace("kat_", "")
+    label = {
+        "cv": "CV (Convert)",
+        "jaspin": "Jaspin",
+        "rekber": "Rekber",
+        "jasget": "Jasget"
+    }.get(kat, kat.upper())
+    sessions[uid] = {"step": f"convert_{kat}", "order": {"jenis": label, "harga": 0}}
+    bot.edit_message_text(
+        f"{label}\n\n"
+        f"Lihat pricelist dan format order di bawah.\n"
+        f"Setelah itu isi format order dan kirim ke sini:",
+        uid, call.message.message_id,
+        reply_markup=kb_convert(kat)
+    )
 
 
 @bot.callback_query_handler(func=lambda c: c.data == "ppob_kat_pulsa")
@@ -424,6 +512,9 @@ def pilih_produk(call):
     if tab in ["ml", "ff", "pubg", "hok"]:
         step = "game_isi_id"
         prompt = "Masukkan ID game kamu:"
+    elif tab == "premium":
+        step = "ppob_isi_data"
+        prompt = "Masukkan email akun kamu:"
     else:
         step = "ppob_isi_data"
         prompt = "Masukkan nomor HP / ID pelanggan:"
@@ -433,19 +524,6 @@ def pilih_produk(call):
     }
     bot.edit_message_text(
         f"Dipilih: {produk['nama']}\nHarga: Rp{int(produk['harga']):,}\n\n{prompt}",
-        uid, call.message.message_id,
-        reply_markup=kb_kembali()
-    )
-
-
-@bot.callback_query_handler(func=lambda c: c.data.startswith("joki_"))
-def pilih_joki(call):
-    uid = call.from_user.id
-    key = call.data
-    label = JOKI.get(key, "Joki Tugas")
-    sessions[uid] = {"step": "joki_detail", "order": {"jenis": label}}
-    bot.edit_message_text(
-        f"Dipilih: {label}\n\nKetik detail tugas kamu (judul, deadline, instruksi):",
         uid, call.message.message_id,
         reply_markup=kb_kembali()
     )
@@ -518,6 +596,7 @@ def handle_text(msg):
     if not sesi:
         start(msg)
         return
+
     step = sesi.get("step")
     order = sesi["order"]
 
@@ -527,7 +606,8 @@ def handle_text(msg):
         sessions[uid]["step"] = "tunggu_bukpem"
         bot.send_message(
             uid,
-            f"Order diterima!\nJenis: {order['jenis']}\nDetail: {teks}\nRef: {order['ref']}\n\n"
+            f"Order diterima!\nJenis: {order['jenis']}\nRef: {order['ref']}\n\n"
+            f"Detail order:\n{teks}\n\n"
             f"1. Tunggu admin konfirmasi harga\n"
             f"2. Cek info payment: {CHANNEL_PAYMENT}\n"
             f"3. Kirim bukti bayar di sini (foto)",
@@ -535,6 +615,22 @@ def handle_text(msg):
         )
         username_buyer = f"@{msg.from_user.username}" if msg.from_user.username else str(uid)
         kirim_notif_admin(uid, order, username_buyer, "JOKI")
+
+    elif step in ["convert_cv", "convert_jaspin", "convert_rekber", "convert_jasget"]:
+        order["detail"] = teks
+        order["ref"] = f"CVT{uid}{int(time.time())}"
+        sessions[uid]["step"] = "tunggu_bukpem"
+        bot.send_message(
+            uid,
+            f"Order diterima!\nLayanan: {order['jenis']}\nRef: {order['ref']}\n\n"
+            f"Detail order:\n{teks}\n\n"
+            f"1. Tunggu admin konfirmasi\n"
+            f"2. Cek info payment: {CHANNEL_PAYMENT}\n"
+            f"3. Kirim bukti bayar di sini (foto)",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Info Payment", url=CHANNEL_PAYMENT)]])
+        )
+        username_buyer = f"@{msg.from_user.username}" if msg.from_user.username else str(uid)
+        kirim_notif_admin(uid, order, username_buyer, order["jenis"].upper())
 
     elif step == "ppob_isi_data":
         order["detail"] = teks
@@ -573,3 +669,4 @@ def handle_text(msg):
 if __name__ == "__main__":
     print(f"Bot {NAMA_TOKO} berjalan...")
     bot.infinity_polling()
+    
