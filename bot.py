@@ -27,15 +27,15 @@ sessions = {}
 pending_review = {}
 
 FORMAT_JOKI = (
-    "Silakan isi format order berikut, lalu kirim ke sini:\n\n"
+    "Silakan salin format di bawah, isi, lalu kirim ke sini:\n\n"
     "```\n"
     "Jenis Tugas: (jurnal/essay/makalah/laporan/PPT/proposal/skripsi/lainnya)\n"
     "Judul/Topik: \n"
     "Detail Tugas: \n"
     "Deadline: \n"
     "Jumlah Halaman/Kata: \n"
-    "Referensi Khusus: (kosongkan jika tidak ada)\n"
-    "Catatan Tambahan: (kosongkan jika tidak ada)"
+    "Referensi Khusus: \n"
+    "Catatan Tambahan: \n"
     "```"
 )
 
@@ -46,12 +46,6 @@ PRICELIST = {
     "jaspin": "https://t.me/honeypaystry/17",
     "rekber": "https://t.me/honeypaystry/22",
     "jasget": "https://t.me/honeypaystry/23",
-}
-
-CHANNEL_TESTI = {
-    "tugas": ("Testi Tugas", "https://t.me/resultmayo"),
-    "transaksi": ("Testi Transaksi", "https://t.me/coneverts"),
-    "game": ("Testi Game", "https://t.me/tasteplay"),
 }
 
 PROVIDER_PULSA = [
@@ -117,7 +111,8 @@ def kirim_notif_admin(uid, order, username_buyer, tipe):
         f"User ID: {uid}\n\n"
         f"/proses {uid}\n"
         f"/done {uid}\n"
-        f"/cancel {uid}"
+        f"/cancel {uid}\n"
+        f"/reply {uid} <pesan>"
     )
     for admin in [ADMIN_ID, OWNER_ID]:
         try:
@@ -158,9 +153,9 @@ def kb_menu_utama():
         InlineKeyboardButton("Rekber", callback_data="kat_rekber"),
         InlineKeyboardButton("Jasget", callback_data="kat_jasget"),
     )
-    kb.add(InlineKeyboardButton("Testi Tugas", url=CHANNEL_TESTI["tugas"][1]))
-    kb.add(InlineKeyboardButton("Testi Transaksi", url=CHANNEL_TESTI["transaksi"][1]))
-    kb.add(InlineKeyboardButton("Testi Game", url=CHANNEL_TESTI["game"][1]))
+    kb.add(InlineKeyboardButton("Testi Tugas", url="https://t.me/resultmayo"))
+    kb.add(InlineKeyboardButton("Testi Transaksi", url="https://t.me/coneverts"))
+    kb.add(InlineKeyboardButton("Testi Game", url="https://t.me/tasteplay"))
     kb.add(InlineKeyboardButton("Tanya Admin", url=f"https://t.me/{ADMIN_USERNAME}"))
     return kb
 
@@ -227,9 +222,7 @@ def kb_convert(kat):
 
 
 def cek_pending_review(uid):
-    if uid in pending_review:
-        return True
-    return False
+    return uid in pending_review
 
 
 @bot.message_handler(commands=["start", "menu"])
@@ -246,6 +239,26 @@ def start(msg):
         f"Halo {nama}! Selamat datang di {NAMA_TOKO}\n\nPilih layanan:",
         reply_markup=kb_menu_utama()
     )
+
+
+@bot.message_handler(commands=["reply"])
+def cmd_reply(msg):
+    if not is_admin(msg.from_user.id):
+        return
+    parts = msg.text.split(None, 2)
+    if len(parts) < 3:
+        bot.send_message(msg.from_user.id, "Format: /reply <user_id> <pesan>")
+        return
+    try:
+        target = int(parts[1])
+        pesan = parts[2]
+        bot.send_message(
+            target,
+            f"Pesan dari Admin {NAMA_TOKO}:\n\n{pesan}"
+        )
+        bot.send_message(msg.from_user.id, f"Pesan terkirim ke {target}")
+    except Exception:
+        bot.send_message(msg.from_user.id, "Gagal kirim. Cek user ID.")
 
 
 @bot.message_handler(commands=["done"])
@@ -337,7 +350,7 @@ def kat_joki(call):
         bot.answer_callback_query(call.id, "Isi rating dulu ya!")
         return
     bot.answer_callback_query(call.id)
-    sessions[uid] = {"step": "joki_detail", "order": {"jenis": "Joki Tugas"}}
+    sessions[uid] = {"step": "joki_detail", "order": {"jenis": "Joki Tugas", "harga": 0}}
     bot.edit_message_text(
         f"Joki Tugas\n\n{FORMAT_JOKI}\n\nSalin format di atas, isi, lalu kirim ke sini:",
         uid, call.message.message_id,
@@ -551,7 +564,8 @@ def handle_foto(msg):
         f"User ID: {uid}\n\n"
         f"/proses {uid}\n"
         f"/done {uid}\n"
-        f"/cancel {uid}"
+        f"/cancel {uid}\n"
+        f"/reply {uid} <pesan>"
     )
     for admin in [ADMIN_ID, OWNER_ID]:
         try:
@@ -672,4 +686,3 @@ def handle_text(msg):
 if __name__ == "__main__":
     print(f"Bot {NAMA_TOKO} berjalan...")
     bot.infinity_polling()
-    
