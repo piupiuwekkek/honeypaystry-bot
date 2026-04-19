@@ -27,14 +27,16 @@ sessions = {}
 pending_review = {}
 
 FORMAT_JOKI = (
-    "```Silakan isi format order berikut, lalu kirim ke sini:\n\n"
+    "Silakan isi format order berikut, lalu kirim ke sini:\n\n"
+    "```\n"
     "Jenis Tugas: (jurnal/essay/makalah/laporan/PPT/proposal/skripsi/lainnya)\n"
     "Judul/Topik: \n"
     "Detail Tugas: \n"
     "Deadline: \n"
     "Jumlah Halaman/Kata: \n"
     "Referensi Khusus: (kosongkan jika tidak ada)\n"
-    "Catatan Tambahan: (kosongkan jika tidak ada)```"
+    "Catatan Tambahan: (kosongkan jika tidak ada)"
+    "```"
 )
 
 FORMAT_CONVERT = "https://t.me/honeypaystry/36"
@@ -339,6 +341,7 @@ def kat_joki(call):
     bot.edit_message_text(
         f"Joki Tugas\n\n{FORMAT_JOKI}\n\nSalin format di atas, isi, lalu kirim ke sini:",
         uid, call.message.message_id,
+        parse_mode="Markdown",
         reply_markup=kb_kembali()
     )
 
