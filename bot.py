@@ -112,7 +112,8 @@ def kirim_notif_admin(uid, order, username_buyer, tipe):
         f"/proses {uid}\n"
         f"/done {uid}\n"
         f"/cancel {uid}\n"
-        f"/reply {uid} <pesan>"
+        f"/reply {uid} <pesan>\n"
+        f"/reply {uid} <harga> <pesan>"
     )
     for admin in [ADMIN_ID, OWNER_ID]:
         try:
@@ -136,6 +137,40 @@ def minta_review(uid, order):
         f"Terima kasih sudah order di {NAMA_TOKO}!\n\n"
         f"Sebelum lanjut order berikutnya, mohon isi rating dulu ya (1-5):",
         reply_markup=kb
+    )
+
+
+def cek_pending_review(uid):
+    return uid in pending_review
+
+
+def tampil_produk(uid, message_id, tab_name, sheet_id, back_callback):
+    produk_list = get_sheet_data(sheet_id, tab_name)
+    if not produk_list:
+        bot.edit_message_text(
+            "Produk tidak tersedia atau belum diisi. Hubungi admin.",
+            uid, message_id,
+            reply_markup=kb_kembali(back_callback)
+        )
+        return
+    if uid not in sessions:
+        sessions[uid] = {"step": "menu", "order": {}}
+    sessions[uid]["order"]["tab"] = tab_name
+    sessions[uid]["order"]["produk_list"] = produk_list
+    subkats = list(dict.fromkeys([p["kategori"] for p in produk_list if str(p.get("kategori", "")).strip()]))
+    if subkats:
+        tipe = tab_name.split("_")[0].title()
+        provider = tab_name.split("_")[1].title() if len(tab_name.split("_")) > 1 else ""
+        bot.edit_message_text(
+            f"{tipe} {provider} - Pilih kategori:",
+            uid, message_id,
+            reply_markup=kb_subkat(subkats, tab_name, back_callback)
+        )
+        return
+    bot.edit_message_text(
+        "Pilih produk:",
+        uid, message_id,
+        reply_markup=kb_produk(produk_list, back_callback)
     )
 
 
@@ -173,7 +208,7 @@ def kb_provider(tipe):
     providers = PROVIDER_PULSA if tipe == "pulsa" else PROVIDER_KUOTA
     back = "ppob_kat_pulsa" if tipe == "pulsa" else "ppob_kat_kuota"
     for label, key in providers:
-        kb.add(InlineKeyboardButton(label, callback_data=f"provider_{key}"))
+        kb.add(InlineKeyboardButton(label, callback_data=f"prov_{key}"))
     kb.add(InlineKeyboardButton("Kembali", callback_data=back))
     return kb
 
@@ -199,11 +234,11 @@ def kb_produk(produk_list, back_callback):
     return kb
 
 
-def kb_subkat(subkats, tab_name):
+def kb_subkat(subkats, tab_name, back_callback):
     kb = InlineKeyboardMarkup()
     for s in subkats:
-        kb.add(InlineKeyboardButton(s, callback_data=f"subkat_{tab_name}_{s}"))
-    kb.add(InlineKeyboardButton("Kembali", callback_data=f"provider_{tab_name}"))
+        kb.add(InlineKeyboardButton(s, callback_data=f"subkat_{tab_name}|{s}"))
+    kb.add(InlineKeyboardButton("Kembali", callback_data=back_callback))
     return kb
 
 
@@ -219,10 +254,6 @@ def kb_convert(kat):
     kb.add(InlineKeyboardButton("Lihat Format Order", url=FORMAT_CONVERT))
     kb.add(InlineKeyboardButton("Kembali", callback_data="back_menu"))
     return kb
-
-
-def cek_pending_review(uid):
-    return uid in pending_review
 
 
 @bot.message_handler(commands=["start", "menu"])
@@ -245,20 +276,34 @@ def start(msg):
 def cmd_reply(msg):
     if not is_admin(msg.from_user.id):
         return
-    parts = msg.text.split(None, 2)
+    parts = msg.text.split(None, 3)
     if len(parts) < 3:
-        bot.send_message(msg.from_user.id, "Format: /reply <user_id> <pesan>")
+        bot.send_message(msg.from_user.id, "Format:\n/reply <user_id> <pesan>\n/reply <user_id> <harga> <pesan>")
         return
     try:
         target = int(parts[1])
-        pesan = parts[2]
-        bot.send_message(
-            target,
-            f"Pesan dari Admin {NAMA_TOKO}:\n\n{pesan}"
-        )
-        bot.send_message(msg.from_user.id, f"Pesan terkirim ke {target}")
-    except Exception:
-        bot.send_message(msg.from_user.id, "Gagal kirim. Cek user ID.")
+        # Cek apakah argumen kedua adalah angka (harga)
+        try:
+            harga = int(parts[2].replace(".", "").replace(",", ""))
+            pesan = parts[3] if len(parts) > 3 else ""
+            # Update harga di sesi buyer
+            if target in sessions:
+                sessions[target]["order"]["harga"] = harga
+            bot.send_message(
+                target,
+                f"Pesan dari Admin {NAMA_TOKO}:\n\n{pesan}\n\nHarga order kamu: Rp{harga:,}"
+            )
+            bot.send_message(msg.from_user.id, f"Pesan + harga Rp{harga:,} terkirim ke {target}")
+        except (ValueError, IndexError):
+            # Bukan angka, berarti reply biasa
+            pesan = " ".join(parts[2:])
+            bot.send_message(
+                target,
+                f"Pesan dari Admin {NAMA_TOKO}:\n\n{pesan}"
+            )
+            bot.send_message(msg.from_user.id, f"Pesan terkirim ke {target}")
+    except Exception as e:
+        bot.send_message(msg.from_user.id, f"Gagal kirim. Error: {e}")
 
 
 @bot.message_handler(commands=["done"])
@@ -386,6 +431,8 @@ def kat_premium(call):
         bot.answer_callback_query(call.id, "Isi rating dulu ya!")
         return
     bot.answer_callback_query(call.id, "Memuat produk...")
+    if uid not in sessions:
+        sessions[uid] = {"step": "menu", "order": {}}
     produk_list = get_sheet_data(SHEET_ID_PREMIUM, "Sheet1")
     if not produk_list:
         bot.edit_message_text(
@@ -394,7 +441,6 @@ def kat_premium(call):
             reply_markup=kb_kembali()
         )
         return
-    sessions[uid] = sessions.get(uid, {"step": "menu", "order": {}})
     sessions[uid]["order"]["tab"] = "premium"
     sessions[uid]["order"]["produk_list"] = produk_list
     bot.edit_message_text(
@@ -412,17 +458,10 @@ def kat_convert(call):
         return
     bot.answer_callback_query(call.id)
     kat = call.data.replace("kat_", "")
-    label = {
-        "cv": "CV (Convert)",
-        "jaspin": "Jaspin",
-        "rekber": "Rekber",
-        "jasget": "Jasget"
-    }.get(kat, kat.upper())
+    label = {"cv": "CV (Convert)", "jaspin": "Jaspin", "rekber": "Rekber", "jasget": "Jasget"}.get(kat, kat.upper())
     sessions[uid] = {"step": f"convert_{kat}", "order": {"jenis": label, "harga": 0}}
     bot.edit_message_text(
-        f"{label}\n\n"
-        f"Lihat pricelist dan format order di bawah.\n"
-        f"Setelah itu isi format order dan kirim ke sini:",
+        f"{label}\n\nLihat pricelist dan format order di bawah.\nSetelah itu isi format order dan kirim ke sini:",
         uid, call.message.message_id,
         reply_markup=kb_convert(kat)
     )
@@ -440,54 +479,42 @@ def ppob_kuota(call):
     bot.edit_message_text("Kuota - Pilih provider:", call.from_user.id, call.message.message_id, reply_markup=kb_provider("kuota"))
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("provider_"))
+@bot.callback_query_handler(func=lambda c: c.data.startswith("prov_"))
 def pilih_provider(call):
     uid = call.from_user.id
-    tab_name = call.data.replace("provider_", "")
+    tab_name = call.data.replace("prov_", "")
     bot.answer_callback_query(call.id, "Memuat produk...")
-    produk_list = get_sheet_data(SHEET_ID_PPOB, tab_name)
-    if not produk_list:
-        bot.edit_message_text(
-            "Produk tidak tersedia atau belum diisi. Hubungi admin.",
-            uid, call.message.message_id,
-            reply_markup=kb_kembali("kat_ppob")
-        )
-        return
-    sessions[uid] = sessions.get(uid, {"step": "menu", "order": {}})
-    sessions[uid]["order"]["tab"] = tab_name
-    subkats = list(dict.fromkeys([p["kategori"] for p in produk_list if p.get("kategori")]))
-    if subkats:
-        tipe_label = tab_name.replace("pulsa_", "").replace("kuota_", "").title()
-        bot.edit_message_text(
-            f"{tab_name.split('_')[0].title()} {tipe_label} - Pilih kategori:",
-            uid, call.message.message_id,
-            reply_markup=kb_subkat(subkats, tab_name)
-        )
-        return
-    back = "ppob_kat_pulsa" if tab_name.startswith("pulsa_") else "ppob_kat_kuota"
-    sessions[uid]["order"]["produk_list"] = produk_list
-    bot.edit_message_text("Pilih produk:", uid, call.message.message_id, reply_markup=kb_produk(produk_list, back))
+    tipe = tab_name.split("_")[0]
+    back_to_provider = f"ppob_kat_{tipe}"
+    if uid not in sessions:
+        sessions[uid] = {"step": "menu", "order": {}}
+    tampil_produk(uid, call.message.message_id, tab_name, SHEET_ID_PPOB, back_to_provider)
 
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("subkat_"))
 def pilih_subkat(call):
     uid = call.from_user.id
     raw = call.data.replace("subkat_", "")
-    parts = raw.split("_", 2)
-    tipe = parts[0]
-    provider = parts[1]
-    subkat = parts[2] if len(parts) > 2 else ""
-    tab_name = f"{tipe}_{provider}"
+    if "|" not in raw:
+        bot.answer_callback_query(call.id, "Error navigasi.")
+        return
+    tab_name, subkat = raw.split("|", 1)
+    tipe = tab_name.split("_")[0]
+    back_to_provider = f"ppob_kat_{tipe}"
     produk_list = get_sheet_data(SHEET_ID_PPOB, tab_name)
-    filtered = [p for p in produk_list if p.get("kategori") == subkat]
+    filtered = [p for p in produk_list if str(p.get("kategori", "")).strip() == subkat]
     if not filtered:
         bot.answer_callback_query(call.id, "Produk tidak ditemukan.")
         return
+    if uid not in sessions:
+        sessions[uid] = {"step": "menu", "order": {}}
+    sessions[uid]["order"]["tab"] = tab_name
     sessions[uid]["order"]["produk_list"] = filtered
+    provider = tab_name.split("_")[1].title() if len(tab_name.split("_")) > 1 else ""
     bot.edit_message_text(
-        f"{tipe.title()} {provider.title()} - {subkat}:",
+        f"{tipe.title()} {provider} - {subkat}:",
         uid, call.message.message_id,
-        reply_markup=kb_produk(filtered, f"provider_{tab_name}")
+        reply_markup=kb_produk(filtered, f"prov_{tab_name}")
     )
 
 
@@ -504,7 +531,8 @@ def pilih_game(call):
             reply_markup=kb_kembali("kat_game")
         )
         return
-    sessions[uid] = sessions.get(uid, {"step": "menu", "order": {}})
+    if uid not in sessions:
+        sessions[uid] = {"step": "menu", "order": {}}
     sessions[uid]["order"]["tab"] = tab_name
     sessions[uid]["order"]["produk_list"] = produk_list
     bot.edit_message_text("Pilih nominal:", uid, call.message.message_id, reply_markup=kb_produk(produk_list, "kat_game"))
@@ -565,7 +593,8 @@ def handle_foto(msg):
         f"/proses {uid}\n"
         f"/done {uid}\n"
         f"/cancel {uid}\n"
-        f"/reply {uid} <pesan>"
+        f"/reply {uid} <pesan>\n"
+        f"/reply {uid} <harga> <pesan>"
     )
     for admin in [ADMIN_ID, OWNER_ID]:
         try:
