@@ -27,14 +27,14 @@ sessions = {}
 pending_review = {}
 
 FORMAT_JOKI = (
-    "Silakan isi format order berikut, lalu kirim ke sini:\n\n"
+    "```Silakan isi format order berikut, lalu kirim ke sini:\n\n"
     "Jenis Tugas: (jurnal/essay/makalah/laporan/PPT/proposal/skripsi/lainnya)\n"
     "Judul/Topik: \n"
     "Detail Tugas: \n"
     "Deadline: \n"
     "Jumlah Halaman/Kata: \n"
     "Referensi Khusus: (kosongkan jika tidak ada)\n"
-    "Catatan Tambahan: (kosongkan jika tidak ada)"
+    "Catatan Tambahan: (kosongkan jika tidak ada)```"
 )
 
 FORMAT_CONVERT = "https://t.me/honeypaystry/36"
